@@ -15,6 +15,7 @@ async function test() {
 test();
 
 let activeDomain = null;
+const tempAllow = {};
 
 function getDomain(url) {
   try {
@@ -27,9 +28,19 @@ function getDomain(url) {
 // block a domain
 function enforceBlock(domain, tabId) {
   chrome.tabs.update(tabId, {
-    url: chrome.runtime.getURL("/blocked/blocked.html")
+    url: chrome.runtime.getURL(`/blocked/blocked.html?domain=${domain}`)
   });
   console.log(`${domain} is now blocked`);
+}
+
+function isTempAllowed(domain) {
+  const expiry = tempAllow[domain];
+  if (!expiry) return false;
+  if (Date.now() > expiry) {
+    delete tempAllow[domain];
+    return false;
+  }
+  return true;
 }
 
 // switching tab
@@ -37,7 +48,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   const tab = await chrome.tabs.get(activeInfo.tabId);
   activeDomain = getDomain(tab.url);
   console.log("Active domain:", activeDomain);
-  if (activeDomain && await isBlocked(activeDomain)) {
+  if (activeDomain && await isBlocked(activeDomain) && !isTempAllowed(activeDomain)){
     enforceBlock(activeDomain, activeInfo.tabId);
   }
 });
@@ -46,7 +57,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete") {
     activeDomain = getDomain(tab.url);
     console.log("Active domain updated:", activeDomain);
-    if (activeDomain && await isBlocked(activeDomain)) {
+    if (activeDomain && await isBlocked(activeDomain) && !isTempAllowed(activeDomain)) {
       enforceBlock(activeDomain, tabId);
     }
   }
@@ -77,10 +88,19 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
   // check if limit is exceeded
   const limitSeconds = managedSite.dailyLimitMinutes * 60;
-  if (usage.totalSeconds >= limitSeconds && managedSite.blockMode === "hard") {
-    await setBlocked(managedSite.domain);
+  if (usage.totalSeconds >= limitSeconds && managedSite.blockMode === "hard" && !isTempAllowed(activeDomain)) {
+    await setBlocked(managedSite.domain, true);
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) enforceBlock(managedSite.domain, tabs[0].id);
     });
+  }
+});
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === "TEMP_ALLOW") {
+    const expiry = Date.now() + msg.duration;
+    tempAllow[msg.domain] = expiry;
+    setBlocked(msg.domain, false);
+    console.log(`Allowed ${msg.domain} for 5 minutes`);
   }
 });

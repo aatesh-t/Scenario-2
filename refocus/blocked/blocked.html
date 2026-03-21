@@ -1,10 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang = eng>
   <head>
     <title>ReFocus - Site Blocked</title>
+    <link rel="stylesheet" href="blocked.css">
   </head>
   <body>
+  <div>
     <h1>This site has been blocked by ReFocus</h1>
     <p>Time limit exceeded.</p>
+  </div>
+
+  <div class="container">
+    <button id="overrideBtn">Override</button>
+    <div id="challenge" style="display:none; margin-top:20px;">
+      <p id="question"></p>
+      <input type="text" id="answer" placeholder="Your answer">
+      <button id="submitAnswer">Submit</button>
+    </div>
+    <p id="quote" style="margin-top:20px;"></p>
+  </div>
+  <script src="blocked.js"></script>
+
   </body>
+
 </html>
