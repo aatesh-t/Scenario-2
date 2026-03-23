@@ -68,11 +68,24 @@ export async function isBlocked(domain) {
   return blocked.includes(domain);
 }
 
-export async function setBlocked(domain) {
+export async function setBlocked(domain, value = true) {
   const result = await chrome.storage.local.get("blockedSites");
-  const blocked = result.blockedSites || [];
-  if (!blocked.includes(domain)) {
-    blocked.push(domain);
-    await chrome.storage.local.set({ blockedSites: blocked });
+  let blocked = result.blockedSites || [];
+  if (value) {
+    if (!blocked.includes(domain)) {
+      blocked.push(domain);
+    }
+  } else {
+    blocked = blocked.filter(d => d !== domain);
   }
+  await chrome.storage.local.set({ blockedSites: blocked });
+}
+
+export async function getPlantGrowth() {
+  const result = await chrome.storage.local.get("plantGrowth");
+  return result.plantGrowth || 0;
+}
+
+export async function savePlantGrowth(value) {
+  await chrome.storage.local.set({ plantGrowth: value });
 }

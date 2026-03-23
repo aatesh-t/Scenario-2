@@ -35,7 +35,7 @@ submitBtn.addEventListener("click", () => {
   if (userAnswer === correctAnswer) {
     chrome.runtime.sendMessage({
       type: "TEMP_ALLOW",
-      host: currentHost,
+      domain: currentHost,
       duration: 5 * 60 * 1000
     });
 
@@ -63,8 +63,3 @@ const quotes = [
 const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 quoteEl.textContent = randomQuote;
 
-chrome.runtime.sendMessage({
-  type: "TEMP_ALLOW",
-  domain: currentHost,
-  duration: 5 * 60 * 1000
-});
