@@ -9,8 +9,14 @@ async function test() {
   await addManagedSite("youtube.com");
   const sites = await getManagedSites();
   sites[0].dailyLimitMinutes = 1;
+  sites[0].blockedSubPaths = ["/shorts/"];  // 👈 add this line
   await saveManagedSites(sites);
-  console.log("youtube.com added with 1 min limit for testing");
+
+  await addManagedSite("instagram.com");    // 👈 add instagram too
+  const sites2 = await getManagedSites();
+  const ig = sites2.find(s => s.domain === "instagram.com");
+  ig.blockedSubPaths = ["/reels/"];         // 👈 and its sub-path
+  await saveManagedSites(sites2);
 }
 test();
 
