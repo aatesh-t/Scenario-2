@@ -195,6 +195,20 @@ async function renderSiteChart(sites, log) {
   });
 }
 
+async function removeSite(domainToRemove) {
+  // Load the full managedSites array (not just enabled ones) to avoid
+  // accidentally deleting disabled sites alongside the target
+  const result = await chrome.storage.local.get("managedSites");
+  const allSites = result.managedSites || [];
+  const updated = allSites.filter(s => s.domain !== domainToRemove);
+  await chrome.storage.local.set({ managedSites: updated });
+
+  // Re-render with fresh data
+  const { sites, log } = await loadData();
+  renderSummaryCards(sites, log);
+  renderManagedSites(sites);
+}
+
 function renderManagedSites(sites) {
   if (sites.length === 0) {
     managedSitesList.innerHTML = '<p class="empty-msg">No managed sites. Add sites from the extension popup.</p>';
@@ -202,14 +216,65 @@ function renderManagedSites(sites) {
   }
 
   managedSitesList.innerHTML = sites.map(site => `
-    <div class="site-row">
-      <div>
-        <div class="domain">${site.domain}</div>
-        <div class="details">Limit: ${site.dailyLimitMinutes} min/day &middot; Added: ${site.dateAdded}</div>
+      <div class="site-row">
+        <div class="site-row-info">
+          <div class="domain">${site.domain}</div>
+          <div class="details">
+            Limit: <input type="number" class="limit-input" data-domain="${site.domain}" value="${site.dailyLimitMinutes}" min="1"> min/day 
+          </div>
+        </div>
+        <div class="site-row-actions">
+          <span class="mode-badge ${site.blockMode}">${site.blockMode}</span>
+          
+          <button class="save-limit-btn" data-domain="${site.domain}">Save</button>
+          
+          <button class="remove-btn" data-domain="${site.domain}">Remove</button>
+        </div>
       </div>
-      <span class="mode-badge ${site.blockMode}">${site.blockMode}</span>
-    </div>
-  `).join("");
+    `).join("");
+
+  managedSitesList.querySelectorAll(".remove-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const domain = e.currentTarget.dataset.domain;
+      if (confirm(`Remove "${domain}" from managed sites?`)) {
+        await removeSite(domain);
+      }
+    });
+  });
+
+  managedSitesList.querySelectorAll(".save-limit-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const domain = e.currentTarget.dataset.domain;
+      const input = managedSitesList.querySelector(`.limit-input[data-domain="${domain}"]`);
+      const newLimit = parseInt(input.value);
+
+      if (newLimit > 0) {
+        await updateSiteLimit(domain, newLimit);
+        alert(`Limit updated for ${domain}`);
+      }
+    });
+  });
+}
+
+async function updateSiteLimit(domain, newLimit) {
+  // 1. Get the current list from storage
+  const result = await chrome.storage.local.get("managedSites");
+  const allSites = result.managedSites || [];
+
+  // 2. Create a new array with the updated limit for that specific domain
+  const updatedSites = allSites.map(site => {
+    if (site.domain === domain) {
+      return { ...site, dailyLimitMinutes: newLimit };
+    }
+    return site;
+  });
+
+  // 3. Save it back to storage
+  await chrome.storage.local.set({ managedSites: updatedSites });
+
+  // 4. Refresh the UI stats (like "Sites over limit") immediately
+  const { sites, log } = await loadData();
+  renderSummaryCards(sites, log);
 }
 
 function setupExport(sites, log) {

@@ -49,6 +49,28 @@ function isTempAllowed(domain) {
   return true;
 }
 
+async function checkAndEnforceLimit(domain, tabId) {
+  const sites = await getManagedSites();
+  const managedSite = sites.find(s => domain.includes(s.domain) && s.enabled);
+  
+  if (!managedSite) return;
+
+  const usage = await getUsage(managedSite.domain);
+  const limitSeconds = managedSite.dailyLimitMinutes * 60;
+
+  // If they are over the limit and it's a hard block
+  if (usage.totalSeconds >= limitSeconds && managedSite.blockMode === "hard") {
+    if (!isTempAllowed(managedSite.domain)) {
+      await setBlocked(managedSite.domain, true);
+      enforceBlock(managedSite.domain, tabId);
+    }
+  } else {
+    // Optional: If they increased the limit, you could theoretically 
+    // "unblock" them here, but usually, a refresh is fine.
+    await setBlocked(managedSite.domain, false);
+  }
+}
+
 // switching tab
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   const tab = await chrome.tabs.get(activeInfo.tabId);
@@ -110,3 +132,19 @@ chrome.runtime.onMessage.addListener((msg) => {
     console.log(`Allowed ${msg.domain} for 5 minutes`);
   }
 });
+
+chrome.storage.onChanged.addListener(async (changes, namespace) => {
+  if (namespace === 'local' && changes.managedSites) {
+    console.log("New limits detected. Syncing...");
+    
+    // Get the current active tab to see if the new limit applies to it
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.url) {
+      const currentDomain = getDomain(tab.url);
+      if (currentDomain) {
+        checkAndEnforceLimit(currentDomain, tab.id);
+      }
+    }
+  }
+});
+

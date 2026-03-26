@@ -100,6 +100,12 @@ h2 {
   margin-bottom: 8px;
 }
 
+.site-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .site-row .domain {
   font-size: 14px;
   font-weight: 600;
@@ -109,6 +115,13 @@ h2 {
 .site-row .details {
   font-size: 12px;
   color: #94a3b8;
+}
+
+.site-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .site-row .mode-badge {
@@ -126,6 +139,42 @@ h2 {
 .mode-badge.soft {
   background: #eab30833;
   color: #facc15;
+}
+
+.save-limit-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid #2d9e40;
+  background: transparent;
+  color: #10b981;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.save-limit-btn:hover {
+  background: #0596691a;  
+  border-color: #059669;        
+  color: #059669;               
+}
+
+.remove-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid #ef444466;
+  background: transparent;
+  color: #f87171;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.remove-btn:hover {
+  background: #ef444433;
+  border-color: #f87171;
+  color: #fca5a5;
 }
 
 .empty-msg {
@@ -154,4 +203,14 @@ h2 {
 
 #exportBtn:hover {
   background: #818cf8;
+}
+
+.limit-input {
+  width: 50px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: white;
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin: 0 5px;
 }
