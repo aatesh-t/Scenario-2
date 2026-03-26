@@ -1,9 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8">
     <title>ReFocus</title>
+    <link rel="stylesheet" href="popup.css">
   </head>
   <body>
-    <p>ReFocus</p>
+    <div class="header">
+      <h1>ReFocus</h1>
+      <p class="tagline">Your digital wellbeing companion</p>
+    </div>
+
+    <div class="quick-add">
+      <button id="quickAddBtn">+ Add Current Site</button>
+      <p id="quickAddStatus"></p>
+    </div>
+
+    <div class="section">
+      <h2>Today's Usage</h2>
+      <div id="usageList">
+        <p class="empty-msg">No managed sites yet. Add one above!</p>
+      </div>
+    </div>
+
+    <div class="section plant-section">
+      <h2>Your Plant</h2>
+      <div id="plantDisplay">
+        <span id="plantEmoji" class="plant-emoji"></span>
+        <p id="plantLabel"></p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <a href="#" id="dashboardLink">View Dashboard</a>
+    </div>
+
+    <script src="popup.js"></script>
   </body>
 </html>

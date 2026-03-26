@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>ReFocus - Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>ReFocus Dashboard</h1>
+        <p class="subtitle">Your weekly usage overview</p>
+      </header>
+
+      <div class="summary-cards" id="summaryCards">
+        <!-- Filled by JS -->
+      </div>
+
+      <div class="chart-section">
+        <h2>Daily Usage (Last 7 Days)</h2>
+        <div class="chart-wrapper">
+          <canvas id="weeklyChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <h2>Usage by Site (Today)</h2>
+        <div class="chart-wrapper chart-wrapper-small">
+          <canvas id="siteChart"></canvas>
+        </div>
+      </div>
+
+      <div class="managed-sites-section">
+        <h2>Managed Sites</h2>
+        <div id="managedSitesList"></div>
+      </div>
+
+      <div class="export-section">
+        <button id="exportBtn">Export Data as JSON</button>
+      </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+  </body>
+</html>
