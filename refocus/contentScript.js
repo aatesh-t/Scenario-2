@@ -1,11 +1,5 @@
-// contentScript.js
-// Injected into YouTube and Instagram pages to block Shorts/Reels
-// without blocking the whole site. Uses Shadow DOM overlays for clean
-// style isolation, and MutationObserver for Instagram's SPA behaviour.
-
 const HOSTNAME = window.location.hostname.replace("www.", "");
 
-// ─── Storage helper ──────────────────────────────────────────────────────────
 async function getManagedSite() {
   return new Promise((resolve) => {
     chrome.storage.local.get("managedSites", (result) => {
@@ -22,7 +16,6 @@ function isSubPathBlocked(site, subPath) {
   return site.blockedSubPaths.some((p) => subPath.includes(p));
 }
 
-// ─── Shadow DOM overlay ──────────────────────────────────────────────────────
 function createOverlay(message = "This content is blocked by ReFocus") {
   const host = document.createElement("div");
 
@@ -89,11 +82,7 @@ function createOverlay(message = "This content is blocked by ReFocus") {
   return host;
 }
 
-// ─── YouTube Shorts blocking ─────────────────────────────────────────────────
-// YouTube is a SPA that uses its own internal router. It doesn't reliably
-// fire popstate or pushState for every navigation, so we can't depend on
-// those alone. The most robust solution is a polling loop that checks the
-// current URL every 500ms — cheap, and guaranteed to catch every navigation.
+// Youtube Shorts blocking - uses a polling loop that checks the current URL every 500ms
 
 let youtubeOverlay = null;
 let lastYouTubeURL = "";
@@ -124,14 +113,10 @@ async function handleYouTubeNavigation() {
 }
 
 function initYouTube() {
-  // 1. Run immediately for the initial page load
   handleYouTubeNavigation();
 
-  // 2. Poll every 500ms — catches ALL YouTube internal navigations
-  //    regardless of how YouTube's internal router works
   setInterval(handleYouTubeNavigation, 500);
 
-  // 3. Keep event listeners as instant-response bonus (no visible delay)
   window.addEventListener("popstate", handleYouTubeNavigation);
 
   const originalPushState = history.pushState.bind(history);
@@ -147,20 +132,15 @@ function initYouTube() {
   };
 }
 
-// ─── Instagram Reels blocking ────────────────────────────────────────────────
-// Instagram never changes the URL when scrolling to Reels, so we use a
-// MutationObserver to detect when the Reels section appears in the DOM.
-// We also poll the URL so we catch direct navigations to /reels/.
-
+// Instagram Reels blocking - URL is not changed when scrolling to reels
+// so a MutationObserver detects when the Reels section appears in the DOM
 let instagramObserver = null;
 let lastInstagramURL  = "";
 
 function findReelsSection() {
-  // Approach 1: aria-label on the wrapping element
   const ariaMatch = document.querySelector('[aria-label="Reels"]');
   if (ariaMatch) return ariaMatch;
 
-  // Approach 2: heading text "Reels" — walk up to a section-like ancestor
   const allElements = document.querySelectorAll("span, h2, h3");
   for (const el of allElements) {
     if (el.textContent.trim() === "Reels") {
@@ -242,14 +222,13 @@ async function handleInstagramNavigation() {
 }
 
 function initInstagram() {
-  // Run once immediately
   handleInstagramDOM();
   handleInstagramNavigation();
 
-  // Poll for URL changes (catches SPA navigations to /reels/)
+  // Poll for URL changes 
   setInterval(handleInstagramNavigation, 500);
 
-  // MutationObserver watches for Reels sections appearing in the DOM
+  // MutationObserver watches for reels sections appearing in the DOM
   instagramObserver = new MutationObserver(() => {
     handleInstagramDOM();
   });
@@ -260,7 +239,7 @@ function initInstagram() {
   });
 }
 
-// ─── Entry point ─────────────────────────────────────────────────────────────
+// Entry point
 (function init() {
   console.log("ReFocus content script loaded on:", HOSTNAME);
 

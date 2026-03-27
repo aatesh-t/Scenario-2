@@ -89,124 +89,29 @@ async function renderSummaryCards(sites, log) {
   `;
 }
 
-async function renderWeeklyChart(sites, log) {
-  const last7 = getLast7Days();
-  const labels = last7.map(shortDay);
-
-  const datasets = sites.map((site, i) => {
-    const data = last7.map(day => {
-      const dayLog = log[day] || {};
-      const usage = dayLog[site.domain] || { totalSeconds: 0 };
-      return Math.round(usage.totalSeconds / 60); // minutes
-    });
-
-    return {
-      label: site.domain,
-      data,
-      backgroundColor: SITE_COLORS[i % SITE_COLORS.length],
-      borderRadius: 4
-    };
-  });
-
-  new Chart(document.getElementById("weeklyChart"), {
-    type: "bar",
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: "#94a3b8", font: { size: 12 } }
-        }
-      },
-      scales: {
-        x: {
-          stacked: true,
-          ticks: { color: "#64748b" },
-          grid: { color: "#1e293b" }
-        },
-        y: {
-          stacked: true,
-          ticks: {
-            color: "#64748b",
-            callback: (v) => v + "m"
-          },
-          grid: { color: "#1e293b" },
-          title: {
-            display: true,
-            text: "Minutes",
-            color: "#64748b"
-          }
-        }
-      }
-    }
-  });
-}
-
-async function renderSiteChart(sites, log) {
-  const today = todayKey();
-  const todayLog = log[today] || {};
-
-  const labels = [];
-  const data = [];
-  const colors = [];
-
-  sites.forEach((site, i) => {
-    const usage = todayLog[site.domain] || { totalSeconds: 0 };
-    if (usage.totalSeconds > 0) {
-      labels.push(site.domain);
-      data.push(Math.round(usage.totalSeconds / 60));
-      colors.push(SITE_COLORS[i % SITE_COLORS.length]);
-    }
-  });
-
-  if (data.length === 0) {
-    document.getElementById("siteChart").parentElement.innerHTML =
-      '<p class="empty-msg">No usage data for today yet.</p>';
-    return;
-  }
-
-  new Chart(document.getElementById("siteChart"), {
-    type: "doughnut",
-    data: {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: colors,
-        borderColor: "#0f172a",
-        borderWidth: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: "right",
-          labels: { color: "#94a3b8", font: { size: 12 } }
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `${ctx.label}: ${ctx.parsed}m`
-          }
-        }
-      }
-    }
-  });
-}
-
 async function removeSite(domainToRemove) {
-  // Load the full managedSites array (not just enabled ones) to avoid
-  // accidentally deleting disabled sites alongside the target
   const result = await chrome.storage.local.get("managedSites");
   const allSites = result.managedSites || [];
   const updated = allSites.filter(s => s.domain !== domainToRemove);
   await chrome.storage.local.set({ managedSites: updated });
-
-  // Re-render with fresh data
   const { sites, log } = await loadData();
   renderSummaryCards(sites, log);
   renderManagedSites(sites);
+}
+
+async function updateSiteLimit(domain, newLimit) {
+  const result = await chrome.storage.local.get("managedSites");
+  const allSites = result.managedSites || [];
+  const updatedSites = allSites.map(site => {
+    if (site.domain === domain) {
+      return { ...site, dailyLimitMinutes: newLimit };
+    }
+    return site;
+  });
+
+  await chrome.storage.local.set({ managedSites: updatedSites });
+  const { sites, log } = await loadData();
+  renderSummaryCards(sites, log);
 }
 
 function renderManagedSites(sites) {
@@ -256,27 +161,6 @@ function renderManagedSites(sites) {
   });
 }
 
-async function updateSiteLimit(domain, newLimit) {
-  // 1. Get the current list from storage
-  const result = await chrome.storage.local.get("managedSites");
-  const allSites = result.managedSites || [];
-
-  // 2. Create a new array with the updated limit for that specific domain
-  const updatedSites = allSites.map(site => {
-    if (site.domain === domain) {
-      return { ...site, dailyLimitMinutes: newLimit };
-    }
-    return site;
-  });
-
-  // 3. Save it back to storage
-  await chrome.storage.local.set({ managedSites: updatedSites });
-
-  // 4. Refresh the UI stats (like "Sites over limit") immediately
-  const { sites, log } = await loadData();
-  renderSummaryCards(sites, log);
-}
-
 function setupExport(sites, log) {
   exportBtn.addEventListener("click", () => {
     const exportData = {
@@ -297,8 +181,6 @@ function setupExport(sites, log) {
 async function init() {
   const { sites, log } = await loadData();
   renderSummaryCards(sites, log);
-  renderWeeklyChart(sites, log);
-  renderSiteChart(sites, log);
   renderManagedSites(sites);
   setupExport(sites, log);
 }

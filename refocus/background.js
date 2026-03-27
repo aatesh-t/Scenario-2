@@ -1,24 +1,4 @@
-// background.js
-// background service worker for the extension
-// detecting which website is being used, tracking time used, checking if time limit is exceeded, triggering block when limit is exceeded
-
-import { addManagedSite, getManagedSites, getUsage, saveUsage, saveManagedSites, isBlocked, setBlocked } from "./storage.js";
-
-// TEMPORARY TEST - hardcoded "youtube.com" with a 1 min limit - delete after testing
-async function test() {
-  await addManagedSite("youtube.com");
-  const sites = await getManagedSites();
-  sites[0].dailyLimitMinutes = 1;
-  sites[0].blockedSubPaths = ["/shorts/"];  // 👈 add this line
-  await saveManagedSites(sites);
-
-  await addManagedSite("instagram.com");    // 👈 add instagram too
-  const sites2 = await getManagedSites();
-  const ig = sites2.find(s => s.domain === "instagram.com");
-  ig.blockedSubPaths = ["/reels/"];         // 👈 and its sub-path
-  await saveManagedSites(sites2);
-}
-test();
+import { getManagedSites, getUsage, saveUsage, isBlocked, setBlocked } from "./storage.js";
 
 let activeDomain = null;
 const tempAllow = {};
@@ -31,7 +11,7 @@ function getDomain(url) {
   }
 }
 
-// block a domain
+// Block a domain
 function enforceBlock(domain, tabId) {
   chrome.tabs.update(tabId, {
     url: chrome.runtime.getURL(`/blocked/blocked.html?domain=${domain}`)
@@ -58,20 +38,17 @@ async function checkAndEnforceLimit(domain, tabId) {
   const usage = await getUsage(managedSite.domain);
   const limitSeconds = managedSite.dailyLimitMinutes * 60;
 
-  // If they are over the limit and it's a hard block
   if (usage.totalSeconds >= limitSeconds && managedSite.blockMode === "hard") {
     if (!isTempAllowed(managedSite.domain)) {
       await setBlocked(managedSite.domain, true);
       enforceBlock(managedSite.domain, tabId);
     }
   } else {
-    // Optional: If they increased the limit, you could theoretically 
-    // "unblock" them here, but usually, a refresh is fine.
     await setBlocked(managedSite.domain, false);
   }
 }
 
-// switching tab
+// Switching tab
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   const tab = await chrome.tabs.get(activeInfo.tabId);
   activeDomain = getDomain(tab.url);
@@ -91,30 +68,30 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   }
 });
 
-// set-up alarm on install
+// Set-up alarm on install
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create("tick", { periodInMinutes: 0.5 });
   console.log("ReFocus installed, tick alarm created");
 });
 
-// on every tick, add active time
+// On every tick, add active time
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== "tick") return;
   if (!activeDomain) return;
 
-  // check if active domain is in managed list
+  // Check if active domain is in managed list
   const sites = await getManagedSites();
   const managedSite = sites.find(s => activeDomain.includes(s.domain) && s.enabled);
   if (!managedSite) return;
 
-  // add 30 seconds to today's usage
+  // Add 30 seconds to today's usage
   const usage = await getUsage(managedSite.domain);
   usage.totalSeconds += 30;
   await saveUsage(managedSite.domain, usage);
 
   console.log(`${managedSite.domain} - total today: ${usage.totalSeconds}s / ${managedSite.dailyLimitMinutes * 60}s`);
 
-  // check if limit is exceeded
+  // Check if limit is exceeded
   const limitSeconds = managedSite.dailyLimitMinutes * 60;
   if (usage.totalSeconds >= limitSeconds && managedSite.blockMode === "hard" && !isTempAllowed(activeDomain)) {
     await setBlocked(managedSite.domain, true);
@@ -137,7 +114,6 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
   if (namespace === 'local' && changes.managedSites) {
     console.log("New limits detected. Syncing...");
     
-    // Get the current active tab to see if the new limit applies to it
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab && tab.url) {
       const currentDomain = getDomain(tab.url);

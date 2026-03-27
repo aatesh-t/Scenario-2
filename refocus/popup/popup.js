@@ -7,15 +7,6 @@ const plantEmoji = document.getElementById("plantEmoji");
 const plantLabel = document.getElementById("plantLabel");
 const dashboardLink = document.getElementById("dashboardLink");
 
-// Plant growth stages
-const PLANT_STAGES = [
-  { emoji: "\uD83C\uDF31", label: "Seed - just getting started!" },       // index 0
-  { emoji: "\uD83C\uDF3F", label: "Sprout - growing nicely!" },           // index 1
-  { emoji: "\uD83E\uDEB4", label: "Small plant - keep it up!" },          // index 2
-  { emoji: "\uD83C\uDF33", label: "Strong tree - amazing progress!" },    // index 3
-  { emoji: "\uD83C\uDF38", label: "In full bloom - you're thriving!" }    // index 4
-];
-
 function formatTime(totalSeconds) {
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
@@ -81,36 +72,6 @@ async function loadUsage() {
   usageList.innerHTML = html || '<p class="empty-msg">No enabled sites.</p>';
 }
 
-async function loadPlant() {
-  // Calculate compliance: how many enabled sites are under their limit
-  const result = await chrome.storage.local.get(["managedSites", "usageLog", "plantGrowth"]);
-  const sites = result.managedSites || [];
-  const log = result.usageLog || {};
-  let plantGrowth = result.plantGrowth || 0;
-
-  const today = new Date().toISOString().split("T")[0];
-  const enabledSites = sites.filter(s => s.enabled);
-
-  if (enabledSites.length > 0) {
-    const underLimit = enabledSites.filter(site => {
-      const usage = log?.[today]?.[site.domain] || { totalSeconds: 0 };
-      return usage.totalSeconds < site.dailyLimitMinutes * 60;
-    });
-
-    const complianceRate = underLimit.length / enabledSites.length;
-
-    // Grow plant if all sites are under limit, otherwise pause
-    if (complianceRate === 1 && plantGrowth < PLANT_STAGES.length - 1) {
-      plantGrowth = Math.min(PLANT_STAGES.length - 1, plantGrowth + 1);
-      await chrome.storage.local.set({ plantGrowth });
-    }
-  }
-
-  const stage = PLANT_STAGES[Math.min(plantGrowth, PLANT_STAGES.length - 1)];
-  plantEmoji.textContent = stage.emoji;
-  plantLabel.textContent = stage.label;
-}
-
 async function setupQuickAdd() {
   const domain = await getCurrentTabDomain();
   if (!domain || domain.startsWith("chrome") || domain.startsWith("edge")) {
@@ -133,7 +94,6 @@ async function setupQuickAdd() {
   quickAddStatus.textContent = `Add ${domain} to managed sites`;
 
   quickAddBtn.addEventListener("click", async () => {
-    // Create a new managed site object
     const newSite = {
       domain,
       dailyLimitMinutes: 30,
@@ -151,7 +111,6 @@ async function setupQuickAdd() {
     quickAddBtn.disabled = true;
     quickAddStatus.textContent = `Added ${domain}!`;
 
-    // Refresh usage display
     await loadUsage();
   });
 }
@@ -166,7 +125,6 @@ dashboardLink.addEventListener("click", (e) => {
 async function init() {
   await setupQuickAdd();
   await loadUsage();
-  await loadPlant();
 }
 
 init();

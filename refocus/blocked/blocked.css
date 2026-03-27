@@ -7,8 +7,8 @@ body {
   align-items: center;
 
   font-family: sans-serif;
-  background: #0f172a; /* dark blue */
-  color: #e2e8f0; /* soft light text */
+  background: #0f172a;
+  color: #e2e8f0;
 }
 
 .container {
@@ -19,7 +19,7 @@ body {
 h1 {
   font-size: 24px;
   margin-bottom: 10px;
-  color: #c7d2fe; /* soft accent */
+  color: #c7d2fe; 
 }
 
 p {
